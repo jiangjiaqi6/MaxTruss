@@ -2,7 +2,6 @@
 #ifndef GRAPH_H
 #define GRAPH_H
 
-
 #include <fstream>
 #include <cassert>
 #include <algorithm>
@@ -18,8 +17,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unordered_set>
-
-
 
 
 class Graph
@@ -234,50 +231,35 @@ public:
     void loadInfo(T* nbr, uint32_t num, uint64_t pos, MyReadFile& fDat);
     
     void Initial(readFile &file);
-    void loadEid(uint32_t u, uint64_t* nbr, uint32_t& degree, uint64_t pos, MyReadFile& fDat);
-    void loadNbr(uint32_t u, uint32_t* nbr, uint32_t& degree, uint64_t pos, MyReadFile& fDat);
+
     void Intersect(std::vector<vertex_eid>& A, std::vector<vertex_eid>& B, std::vector<eid_eid>& common);
     void printClass(uint32_t u, uint32_t v, uint32_t cls);
     void changeEdgeSup(MyReadFile& fOff, MyReadFile& fSup, uint64_t eid, uint32_t& sup);
-
-
-    void trussDecomNaive(readFile &file, bool isKcore);
-    void secondCoreTrussDecom(readFile &file);
-    void kCoreTrussDecomPlus(readFile &file);
+    void CoreTrussDecomPlus(readFile &file);
     void KCore(readFile &file, uint32_t *coreNum, bool isDynamicload);
-    void reconSecondCoreGraph(uint32_t *coreNum, readFile &file, readFile &newFile);
+    void reconCoreGraph(uint32_t *coreNum, readFile &file, readFile &newFile);
 
     void filterGlobalIntoSub(bool *isInSubG, readFile &file, readFile &newFile, bool isDynamicload);
 
-    uint32_t binary(readFile &file, uint32_t start, uint32_t end);
-    void binaryImproved(readFile &file, uint32_t start);
     void binaryAndIncremental(readFile &file, uint32_t start);
-    bool existTruss(readFile &file, uint32_t mid, uint32_t &TrussEdge);
+    uint32_t binary(readFile &file, uint32_t start, uint32_t end);
     bool existTrussPlus(readFile &file, uint32_t &mid, uint32_t &TrussEdge, uint32_t &Truss);
     bool existTrussLazyUpdate(readFile &file, uint32_t &mid, uint32_t &TrussEdge, uint32_t &Truss, ListLinearHeapTruss *linear_heap, DynamicHeap &dheap);
     bool bottomUpDecom(readFile &file, uint32_t &mid, uint32_t &TrussEdge, uint32_t &Truss);
 
     bool inducedGraph(int mid, readFile &file, int &TrussEdge);
-    void searchCommunitySSD(readFile &file, uint32_t q, uint32_t k);
-    void updateEdgeSSD(uint32_t u, uint32_t v, uint64_t eid, uint32_t uv_sup, uint32_t minsup, MyReadFile &fEdgePos, MyReadFile &fSup, MyReadFile &fBinEdge);
+    
     void updateEdgeSSDNew(uint32_t u, uint32_t v, uint64_t eid, uint32_t uv_sup, uint32_t minsup, uint32_t *sup_arr,MyReadFile &fEdgePos, MyReadFile &fSup, MyReadFile &fBinEdge, MyReadFile &fOff);
-    void trussDecomSSD(readFile &file, bool isKcore);
+    
     void CountTriangleSSD(readFile &file, bool saveSupEdge);
-    void CountTriangleSSDByDegOrder(readFile &file, bool saveSupEdge);
-    void CountTriangleSSDByDegOrderFirst(readFile &file, bool saveSupEdge);
-
     void CountTriangleSSDPlus(readFile &file, bool isOrder = true);
-
+    void CountTriangleSSDByDegOrder(readFile &file, bool saveSupEdge);
 
     void sortSupport(readFile &file);
     void binSortSSD(readFile &file);
-    int IntersectTriangleSSD(uint32_t u, uint32_t u_nbrNum,uint32_t *nbr_u, uint32_t v, uint32_t v_nbrNum, uint32_t *nbr_v, MyReadFile &fDat, MyReadFile &fEid);
     int IntersectTriangleSSDByDegOrder(uint32_t u, uint32_t u_nbrNum,uint32_t *nbr_u, uint32_t v, uint32_t v_nbrNum, uint32_t *nbr_v, 
     MyReadFile &fDat, MyReadFile &fEid, std::vector<eid_eid> &common, std::unordered_map<uint64_t,uint32_t> &map_pos);
-    int IntersectTriangleSSDPlus(uint32_t u, uint32_t *nbr_u, uint32_t v, uint32_t *nbr_v);
-    void IntersectTruss(uint32_t u, uint32_t *nbr_u, uint64_t *eid_u, 
-uint32_t v, uint32_t *nbr_v, uint64_t *eid_v, MyReadFile &fDat, MyReadFile &fEid, MyReadFile &fSup,
-uint32_t sup, vector<ver_eid_eid>& comm, bool flag);
+
 
     void IntersectTrussNew(uint32_t u, uint32_t *nbr_u, uint64_t *eid_u,  uint32_t *sup_u,
 uint32_t v, uint32_t *nbr_v, uint64_t *eid_v, uint32_t *sup_v, MyReadFile &fDat, MyReadFile &fEid, MyReadFile &fSup,
@@ -293,11 +275,9 @@ uint32_t sup, vector<eid_eid>& comm, bool flag);
     bool inducedGraphUnOrder(uint32_t &left,uint32_t &right,uint32_t &mid, readFile &file, uint32_t &TrussEdge, uint32_t &Truss, bool delOnSubg);
     void InitialUnOrder(readFile &file);
     void InitialUnOrderDegSort(readFile &file);
-    void CountTriangleSSDByDegOrderInSecondCore(readFile &file, bool saveSupEdge, bool *isInSubG);
     int IntersectTriangleSSDByDegOrderInSecondCore(uint32_t u, uint32_t u_nbrNum, uint32_t *nbr_u, uint32_t v, uint32_t v_nbrNum, uint32_t *nbr_v, 
 MyReadFile &fDat, MyReadFile &fEid, std::vector<eid_eid> &common, std::unordered_map<uint64_t,uint32_t> &map_pos, bool *isInSubG);
     bool deleteEdge(readFile &file, readFile &newFile,uint32_t last_mid, uint32_t &mid, uint32_t *prefix, uint32_t &TrussDege, uint32_t &Truss);
-    bool deleteEdgeLazyUpdate(readFile &file, readFile &newFile,int last_mid, int &mid, uint32_t *prefix, int &TrussDege, int &Truss, ListLinearHeapTruss *linear_heap, DynamicHeap &dheap);
     
     int getLast_sup(){
         return last_sup;
@@ -319,17 +299,14 @@ uint32_t sup, DynamicHeap &dheap, ListLinearHeapTruss *linear_heap);
 
     bool deleteEdgeLazyUpdateTest(readFile &file, readFile &newFile, uint32_t last_mid, uint32_t &mid, uint32_t *prefix_, uint32_t &TrussEdge, uint32_t &Truss, ListLinearHeapTruss *linear_heap, DynamicHeap &dheap);
 
-    void dynamicMaxTrussDeletion(readFile &file);
-    void dynamicMaxTruss(readFile &file);
-    
-    void dynamicMaxTrussInsertion(readFile &file);
+    void dynamicMaxTrussMaintenance(readFile &file);
+    void dynamicMaxTrussInsertion_YLJ(readFile &file);
+    void dynamicMaxTrussDeletion_YLJ(readFile &file);
     void generateRandomEdges(readFile &file, uint32_t &generate_edge, Edge *dynamic, bool *isInMaxTruss, unordered_map<uint32_t, uint32_t>& globalToSub);
     void generateRandomEdgesInsertion(readFile &file, uint32_t &generate_edge, Edge *dynamic);
-    void recoverySupInDel(readFile &newFile,uint64_t subG_edgeNum, bool *delBit, unordered_set<int>** dynamicDel,unordered_map<uint32_t, uint32_t>& subToGlobal_);
 
     uint32_t selectNbr(readFile &file, uint32_t a, int index);
     void reconMaxTrussGraph(readFile &file, readFile &newFile, bool firstUse = true);
-    void reconMaxTrussGraph2(readFile &file, readFile &newFile, ListLinearHeapTruss *linear_heap, DynamicHeap &dheap);
     void recoveryKMaxTrussSub(readFile &file, unordered_map<uint32_t,uint32_t>& globalToSub, bool *verMaxKTrussSet, string dir);
     void recoveryKMaxTruss(readFile &file, unordered_map<uint32_t,uint32_t>& globalToSub, bool *verMaxKTrussSet, string dir);    
     void delEdgeDynamic(Edge del_e, readFile &newFile, uint32_t maxK, uint64_t &newFileEdge,
@@ -345,6 +322,8 @@ bool *verMaxKTruSet, vector<uint64_t> &begPtr, vector<uint32_t> &degSub);
     void insEdgeDynamicNew(Edge e, readFile &file, unordered_map<uint32_t,unordered_map<uint32_t,uint32_t>> &sup_dram,
     unordered_map<uint32_t,unordered_map<uint32_t,uint64_t>> &eid_dram,
     unordered_map<uint32_t,uint32_t> &subToGlobal);
+
+    void delEdgeDynamicYLJ(Edge e, readFile &file, bool *verMaxKTruSet, vector<uint64_t> &begPtr, vector<uint32_t> &degSub);
     void loadNbrAndSupDynamic(uint32_t u, uint32_t* nbr_, uint32_t* sup_, uint64_t* eid_, uint32_t& _degree, 
 uint64_t begPtr, MyReadFile& fDat, MyReadFile& fSup, MyReadFile& fEid, 
 unordered_map<uint32_t,unordered_map<uint32_t,uint32_t>> &sup_dram, 
@@ -353,9 +332,10 @@ unordered_map<uint32_t,unordered_map<uint32_t,uint64_t>> &eid_dram);
 uint64_t begPtr, MyReadFile& fDat, MyReadFile& fSup, MyReadFile& fEid);
     void IntersectOperaInsDynamic(uint32_t u, uint32_t* nbr_u, uint32_t* sup_u, uint64_t* eid_u, uint32_t u_degree, 
 uint32_t v, uint32_t* nbr_v, uint32_t* sup_v, uint64_t* eid_v, uint32_t v_degree,uint32_t &max_sup,std::vector<ver_eid_eid> &comm);
+    void IntersectOperaDelDynamic(uint32_t u, uint32_t* nbr_u, uint32_t* sup_u, uint64_t* eid_u, uint32_t u_degree, 
+uint32_t v, uint32_t* nbr_v, uint32_t* sup_v, uint64_t* eid_v, uint32_t v_degree,std::vector<ver_eid_eid> &comm);
 
     void UpdateCoreDynamic(readFile &file, uint32_t *coreNum, uint32_t u, uint32_t v);
-
 
 
 };

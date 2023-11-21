@@ -8,14 +8,14 @@
 
 
 int main(int argc, char **argv){
-    if(argc != 9 || strcmp(argv[1],"-f") != 0){
-        printf("Usage: -f [data_file_path] -m [method] -s [name] -d [dir]\n");
+    if(argc != 7 || strcmp(argv[1],"-f") != 0){
+        printf("Usage: -f [data_file_path] -m [method]  -d [dir]\n");
         exit(1);
     }
     const char* filepath = argv[2];
     uint32_t method = atoi(argv[4]);
-    uint32_t persentate = atoi(argv[6]);
-    char* name = argv[8];
+    // uint32_t persentate = atoi(argv[6]);
+    char* name = argv[6];
     string str = name;
 
 
@@ -24,21 +24,41 @@ int main(int argc, char **argv){
     string midResultBase = "/home/jjq/research/ktruss/midResult/"+str;
     
     readFile file(midResultBase+"/");
-    // file.createDir(midResultBase);
+    file.createDir(midResultBase);
     file.loadFile(filepath);
-    log_debug(allClock.Count("file len: %ld",file.getLen()));
     file.LoadGraph();
     log_info(allClock.Count("Load graph done"));
-
 
     Graph g(file.verNum,file.edgeNum);
     g.Initial(file);
 
+    switch (method)
+    {
+    case 0:   //SemiBinary
+        #ifdef DegSort
+        g.CountTriangleSSDByDegOrder(file,true);
+        #else
+        g.CountTriangleSSD(file,true);
+        #endif
+        log_info(allClock.Count("Triangle count done"));
 
-    g.kCoreTrussDecomPlus(file);
-    log_info(allClock.Count("kCoreTrussDecomPlus done"));
-    g.dynamicMaxTruss(file);  
-    log_info(allClock.Count("dynamic MaxTruss done"));
+        g.binaryAndIncremental(file,1);
+        log_info(allClock.Count("binaryAndIncremental done"));
+        break;
+    
+    case 1:  // If -DLazyUpdate is not defined, it is the SemiGreedyCore, otherwise it is the SemiLazyUpdate.
+        g.CoreTrussDecomPlus(file);
+        log_info(allClock.Count("CoreTrussDecomPlus done"));
+        #ifdef Maintenance
+        g.dynamicMaxTrussMaintenance(file);  
+        // g.dynamicMaxTrussInsertion_YLJ(file);
+        // g.dynamicMaxTrussDeletion_YLJ(file);
+        // log_info(allClock.Count("dynamic MaxTruss done"));
+        #endif
+        break;
+    default:
+        break;
+    }
 
     return 0;
 

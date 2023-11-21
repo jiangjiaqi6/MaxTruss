@@ -1,10 +1,9 @@
 OBJ = main.o fileLoader.o graph.o log.o MyFile.o
-TARGET = maintenance_6
+TARGET = main
 INCL = -Iinclude
 CPP = g++
 
-# CFLAGS := -std=c++17 -Iinclude -w -g -mpopcnt -O3 -DDegSort  -DsemiBinary 
-# CFLAGS := -std=c++17 -Iinclude -w -g -mpopcnt -O3 -DDegSort 
+
 # CFLAGS := -std=c++17 -Iinclude -w -g -mpopcnt -O3 -DDegSort  -DLazyUpdate 
 CFLAGS := -std=c++17 -Iinclude -w -g -mpopcnt -O3 -DDegSort  -DLazyUpdate -DMaintenance
 

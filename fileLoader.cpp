@@ -109,7 +109,7 @@ void readFile::LoadGraph(){
         v = mysscanf(eptr, cptr);
         if (cptr >= eptr)
             break;
-        //  自环判断
+        //  self loof
         if (u == v)
             continue;
         
@@ -221,7 +221,6 @@ void readFile::merge(int size, uint32_t &vertexNum, uint32_t &maxDegree, string 
         uint64_t eid = es[minIndex].eid;    
         if(eidToPos.find(eid) != eidToPos.end()){
             eid_eid tmp = {eidToPos[eid],off};
-            // random write costs a lot
             fseek(fOff,eid*sizeof(eid_eid),SEEK_SET);
             fwrite(&tmp,sizeof(eid_eid),1,fOff);
             eidToPos.erase(eid);
@@ -262,10 +261,6 @@ void readFile::merge(int size, uint32_t &vertexNum, uint32_t &maxDegree, string 
             buf[index] = v;
             buf_eid[index] = eid;
             index++;
-
-            // //not use buffer for nbr
-			// fwrite(&v,sizeof(int),1,fDat);
-            // fwrite(&eid,sizeof(uint64_t),1,fEid);
             
 		}
         else if(v != previousB){
@@ -280,8 +275,6 @@ void readFile::merge(int size, uint32_t &vertexNum, uint32_t &maxDegree, string 
             index++;
 			++degree;
 
-            // fwrite(&v,sizeof(int),1,fDat);  //save neighbor v of vertex u
-            // fwrite(&eid,sizeof(uint64_t),1,fEid);
 		}
 		// if u==previousA & v==previousB, ignore edge(u,v) cause it is same as previous one.
 		previousA = u;
@@ -363,9 +356,6 @@ string &name, bool flag, bool isBigG){
     // if flag is true, graph vertex is reorder, otherwise, graph vertex is unorder
     // if isBigG is true, need not to write fEid and fOff datastructure
 
-    // #ifdef semiBinary
-    // delete[] m_vertexMap;
-    // #endif
 
     FILE** frl = new FILE*[size];
     TEdge* es = new TEdge[size];
@@ -411,19 +401,6 @@ string &name, bool flag, bool isBigG){
         uint32_t u = es[minIndex].u;
 		uint32_t v = es[minIndex].v;
         uint64_t eid = es[minIndex].eid; 
-        // if(vertexNum == 108)
-        //     printf("u: %u, v: %u, eid: %lu, minIndex: %u, off: %lu\n",u,v,eid,minIndex,off); 
-        // if(off == 33028782)
-        // {
-        //     for(int i = 0 ; i < size; i++){
-        //         if(es[i].u != m_maxID)
-        //         {
-        //             printf("i: %d, %u\n",i,es[i].u);
-        //             break;
-        //         }
-                    
-        //     }
-        // }
         if(u == previousA && v == previousB) {
             if(!fread(&es[minIndex],sizeof(TEdge),1,frl[minIndex]))
 			    es[minIndex].u = m_maxID;
@@ -433,7 +410,6 @@ string &name, bool flag, bool isBigG){
         if(!isBigG){
             if(eidToPos.find(eid) != eidToPos.end()){
                 eid_eid tmp = {eidToPos[eid],off};
-                // random write costs a lot
                 fseek(fOff,eid*sizeof(eid_eid),SEEK_SET);
                 fwrite(&tmp,sizeof(eid_eid),1,fOff);
                 write_io += 1;
@@ -484,9 +460,6 @@ string &name, bool flag, bool isBigG){
             if(!isBigG)
                 buf_eid[index] = eid;
             index++;
-			// fwrite(&v,sizeof(int),1,fDat);
-            // if(!isBigG)
-            //     fwrite(&eid,sizeof(uint64_t),1,fEid);
 		}
         else if(v != previousB){
             if(!sig && v > previousA ){
@@ -504,9 +477,6 @@ string &name, bool flag, bool isBigG){
             if(!isBigG)
                 buf_eid[index] = eid;
             index++;
-			// fwrite(&v,sizeof(int),1,fDat);  //save neighbor v of vertex u
-            // if(!isBigG)
-            //     fwrite(&eid,sizeof(uint64_t),1,fEid);
 			++degree;
 		}
 		// if u==previousA & v==previousB, ignore edge(u,v) cause it is same as previous one.
@@ -541,7 +511,6 @@ string &name, bool flag, bool isBigG){
         maxDegree = degree;
         maxDegVer = previousA;
     }
-    // log_info(readFileClock_.Count("Merge operation done"));
     
     // write the vertex num and max degree
     if(flag)
@@ -553,10 +522,6 @@ string &name, bool flag, bool isBigG){
         verNum = vertexId.size();
 	write_io += 3*verNum;
     log_debug(readFileClock_.Count("vertex num: %d, edge num: %d",verNum, edgeNum));
-    
-    // log_debug(readFileClock_.Count("Max degree: %d",maxDegree));
-    // log_debug(readFileClock_.Count("Max degree vertex: %d",maxDegVer));
-    // log_debug(readFileClock_.Count("Max map size: %u",max_size));
 
     maxDeg = maxDegree;
     
@@ -692,8 +657,6 @@ void readFile::partitionGraphByVertex(int percentage)
             if(existVer.find(nbr[j]) == existVer.end()) continue;
             secFor = true;
             uint32_t u = verMap[node], v = verMap[nbr[j]];
-            // if(i >= 6856439)
-            //     printf("u: %u, v: %u, deg: %u, pos: %lu, last_pos: %lu\n",u,v,degree,pos,last_pos);
             total_edge++;
             if(u != previousA){ 			// u != previousA demonstrates that all previousA's neighbors have been writen
                 if(degree != -1){ // write the vertex degree in .idx file
@@ -745,7 +708,6 @@ void readFile::partitionGraphByVertex(int percentage)
             previousB = v;
         }
         if(!secFor){
-            // printf("xxx\n");
             if(!sig && last_pos == pos){
                 last_pos = pos+degree*sizeof(uint32_t);
                 fwrite(&last_pos,sizeof(long),1,fileIdx);
@@ -851,7 +813,7 @@ uint32_t LoadEdge(const char *const bptr, const uint32_t len, std::vector<Edge> 
             break;
         vertex.insert(curEdge.u);
         vertex.insert(curEdge.v);
-        //  自环判断
+        //  self loop
         if (curEdge.u == curEdge.v)
             continue;
         Edges.push_back(curEdge);

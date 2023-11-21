@@ -76,9 +76,23 @@ public:
             delete[] m_vertexMap;
         // printf("readfile finish\n");
     }
+    void change(std::string base){
+        m_base = base;
+        m_dat = base+"graph.dat";
+        m_idx = base+"graph.idx";
+        m_info = base+"graph.info";
+        m_eid = base+"graph.eid";
+        m_supp = base+"graph.support";
+        m_suppSort = base+"graph.supportSorted";
+        m_binEdge = base+"graph.binEdge";
+        m_ePos = base+"graph.ePosInBin";
+        m_eidToVer = base+"graph.eidToVertex";
+        m_offset = base+"graph.eidToOffset";
+        len = 0, fd = -1, write_io = 0;
+    }
 
+    struct stat statbuf;
     void loadFile(const char* path){
-        struct stat statbuf;
         fd = open(path,O_RDONLY);
         if (fd < 0)
         {
