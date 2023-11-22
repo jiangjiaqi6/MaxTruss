@@ -243,7 +243,6 @@ public:
     
 
     void binaryAndIncremental(readFile &file, uint32_t start);
-    void binaryImproved(readFile &file, uint32_t start);
 
     uint32_t binary(readFile &file, uint32_t start, uint32_t end);
     bool existTrussPlus(readFile &file, uint32_t &mid, uint32_t &TrussEdge, uint32_t &Truss);

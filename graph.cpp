@@ -804,7 +804,7 @@ void Graph::CoreTrussDecomPlus(readFile &file){
     int current_pid = GetCurrentPid();
     float memory_usage = GetMemoryUsage(current_pid);
     memUsage = max(memory_usage,memUsage);
-    log_info(graphClock_.Count("lower_bound done,mid: %d, capacity: %d,prefix[maxSup]: %d, memUsage: %f, io: %lu", mid, capacity,subG.prefix[subG.maxSup],memUsage,total_io));
+    log_info(graphClock_.Count("lower_bound done, mid: %d, capacity: %d,prefix[maxSup]: %d, memUsage: %f, io: %lu", mid, capacity,subG.prefix[subG.maxSup],memUsage,total_io));
 
     if(capacity >= (mid+2)*(mid+1) / 2){
         uint64_t edge_num = 0;
@@ -1026,7 +1026,7 @@ void Graph::CountTriangleSSDPlus(readFile &file, bool isOrder){
             minSup = min(sup,minSup);
             edges[size].u = u;
             edges[size].v = v;
-            edges[size].sup = sup; // 这里可以优化，减少写入, if sup == 0, continue? it is not necessary to write.
+            edges[size].sup = sup; 
             edges[size].eid = eid_uv;
             size++;
             c++;
@@ -1128,32 +1128,6 @@ uint32_t Graph::binary(readFile &file, uint32_t start, uint32_t end){
 }
 
 
-void Graph::binaryImproved(readFile &file, uint32_t start){
-    uint32_t left = start, right = maxSup, capacity = 0, mid = 0;
-    uint32_t TrussEdge = 0, last_mid = 0, Truss = 0;
-    while(left <= right){
-        mid = (left+right)/2;
-        last_mid = mid;
-        capacity = prefix[maxSup]-prefix[mid-1];
-
-        if(capacity < (mid+2)*(mid+1) / 2)
-        {
-            // log_info(graphClock_.Count("xxx mid: %u",mid));
-            right = mid-1;
-            continue;
-        }
-
-        /* ID of vertex is same as original graph */
-        if(!inducedGraphUnOrder(left,right,mid,file,TrussEdge,Truss,false))
-        {
-            right = mid-1;
-        }
-        else
-            left = mid+1;
-    }
-    total_io += file.write_io;
-    log_info(graphClock_.Count("Trussness: %d, Edge: %d, io: %lu\n", Truss+2, TrussEdge, total_io));
-}
 
 void Graph::binaryAndIncremental(readFile &file, uint32_t start){
     uint32_t left = start, right = maxSup;
@@ -3161,7 +3135,7 @@ void Graph::dynamicMaxTrussMaintenance(readFile &file){
     reconMaxTrussGraph(file,newFile);
     
 
-    bool *isInMaxTruss = new bool[subG_nodeNum]();
+    bool *isInMaxTruss = new bool[nodeNum]();
     for(int i = 0; i < newFile.vertexId.size(); i++)
         isInMaxTruss[newFile.vertexId[i]] = true;  //subgraph
     

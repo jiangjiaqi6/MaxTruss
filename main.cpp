@@ -33,7 +33,7 @@ int main(int argc, char **argv){
 
     switch (method)
     {
-    case 0:   //SemiBinary
+    case 0:   //SemiBinary: define -DsemiBinary, not define -DLazyUpdate
         #ifdef DegSort
         g.CountTriangleSSDByDegOrder(file,true);
         #else
@@ -41,8 +41,7 @@ int main(int argc, char **argv){
         #endif
         log_info(allClock.Count("Triangle count done"));
 
-        // g.binaryAndIncremental(file,1);
-        g.binaryImproved(file,1);
+        g.binaryAndIncremental(file,1);
         log_info(allClock.Count("binaryAndIncremental done"));
         break;
     
@@ -50,7 +49,7 @@ int main(int argc, char **argv){
         g.CoreTrussDecomPlus(file);
         log_info(allClock.Count("CoreTrussDecomPlus done"));
         #ifdef Maintenance
-        // g.dynamicMaxTrussMaintenance(file);  
+        g.dynamicMaxTrussMaintenance(file);  
         // g.dynamicMaxTrussInsertion_YLJ(file);
         // g.dynamicMaxTrussDeletion_YLJ(file);
         // log_info(allClock.Count("dynamic MaxTruss done"));
