@@ -345,6 +345,7 @@ void Graph::Initial(readFile &file){
 void Graph::InitialUnOrderDegSort(readFile &file){
     MyReadFile fIdx( file.m_idx );
     // cout<<"InitialUnOrderDegSort:"<<file.m_idx<<endl;
+
 	fIdx.fopen( BUFFERED );
     uint64_t tmp = 0,tmpb;
     uint32_t degreeTmp = 0;
@@ -765,13 +766,13 @@ void Graph::CoreTrussDecomPlus(readFile &file){
 
     total_io += maxCoreG.total_io;
 
-    // #ifndef Maintenance
-    // if(secondCoreG.getNodeNum() == last_sup+2){  // this is a prunning case: the subgraph is a clique
-    //     maxKtruss = last_sup, maxKtrussEdge = secondCoreG.edgeNum;
-    //     log_info(graphClock_.Count("Trussness: %d, Edge: %d, io: %lu\n", last_sup+2, secondCoreG.getTrussEdge(last_sup+2),total_io));
-    //     return;
-    // }
-    // #endif
+    #ifndef Maintenance
+    if(maxCoreG.getNodeNum() == last_sup+2){  // this is a prunning case: the subgraph is a clique
+        maxKtruss = last_sup, maxKtrussEdge = maxCoreG.edgeNum;
+        log_info(graphClock_.Count("Trussness: %d, Edge: %d, io: %lu\n", last_sup+2, maxCoreG.getTrussEdge(last_sup+2),total_io));
+        return;
+    }
+    #endif
 
     uint32_t left = last_sup, right = maxCore-1, capacity, mid = last_sup;
     if(mid == 0)mid = 1;
@@ -922,6 +923,7 @@ void Graph::CoreTrussDecomPlus(readFile &file){
         }
         fclose(fp);
 
+
         //save information of subToGlobal datastructure
         string subToGlobal_ss = file.m_base +"graph.subToGlobal";
         fp=fopen(subToGlobal_ss.c_str(),"wb");
@@ -942,6 +944,146 @@ void Graph::CoreTrussDecomPlus(readFile &file){
     }
 
 }
+
+int Graph::IntersectTriangleSSDPlus(uint32_t u, uint32_t *nbr_u, uint32_t v, uint32_t *nbr_v)
+{
+    int ptr_u = 0;
+    int upper_u = degree[u];
+    int ptr_v = 0;
+    int upper_v = degree[v];
+
+    if(nbr_u[upper_u-1] < nbr_v[0] || nbr_v[upper_v-1] < nbr_u[0])
+        return 0;
+
+    int count = 0;
+    while(ptr_u < upper_u && ptr_v < upper_v){
+        if(vis[nbr_u[ptr_u]] || nbr_u[ptr_u] < nbr_v[ptr_v])
+            ptr_u++;
+        else if(vis[nbr_v[ptr_v]] || nbr_u[ptr_u] > nbr_v[ptr_v])
+            ptr_v++;
+        else
+        {
+            ptr_u++;
+            ptr_v++;
+            count++;
+        }
+    }
+    return count;
+}
+
+void Graph::CountTriangleSSDPlus(readFile &file, bool isOrder){
+    log_info(graphClock_.Count("Enter CountTriangleSSDPlus function"));
+    file.write_io = 0;
+	MyReadFile fDat( file.m_dat );
+	fDat.fopen( BUFFERED );
+    MyReadFile fEid( file.m_eid );
+	fEid.fopen( BUFFERED );
+    MyReadFile fOff( file.m_offset );
+	fOff.fopen( BUFFERED );
+    EdgeSup* edges = new EdgeSup[file.memEdges];
+    FILE* fSupp = fopen(file.m_supp.c_str(),"wb");
+
+    uint32_t triangle_count = 0, size = 0, tmpfile = 0, c = 0;
+    uint32_t upper,tmpi,i;
+    char fileName[200];
+
+    string sub_dir = file.m_base + "support_sort_edge";
+    file.createDir(sub_dir);
+
+    uint32_t* nbr_u = (uint32_t *)malloc(sizeof(uint32_t) * file.maxDeg);
+    uint32_t* nbr_v = (uint32_t *)malloc(sizeof(uint32_t) * file.maxDeg);
+    if(isOrder)
+        upper = nodeNum;
+    else
+        upper = file.verNum;
+    for(uint32_t tmpi = 0; tmpi < upper; tmpi++){
+        if(isOrder)
+            i = tmpi;
+        else
+            i = file.vertexId[tmpi];
+        if(vis[i])continue;
+
+        loadInfo(nbr_u,degree[i],edgeListBegPtr[i],fDat);
+        uint32_t u = i;
+        for(uint32_t j = 0; j < degree[i]; j++){
+            uint32_t v = nbr_u[j];
+            if(vis[v])continue;
+            // if(!(degree[v]<degree[u] || (degree[u]==degree[v] && v<u)))
+            //     continue;
+            if(u > v)
+                continue;
+
+            loadInfo(nbr_v,degree[v],edgeListBegPtr[v],fDat);
+            uint32_t sup = IntersectTriangleSSDPlus(u,nbr_u,v,nbr_v);
+            if(sup == 0)continue;
+
+            uint64_t offset = edgeListBegPtr[i]*2+j*sizeof(uint64_t);
+            uint64_t eid_uv;
+            fEid.fseek(offset);
+            fEid.fread(&eid_uv,sizeof(uint64_t));
+
+            maxSup = max(sup,maxSup);
+            minSup = min(sup,minSup);
+            edges[size].u = u;
+            edges[size].v = v;
+            edges[size].sup = sup; // 这里可以优化，减少写入, if sup == 0, continue? it is not necessary to write.
+            edges[size].eid = eid_uv;
+            size++;
+            c++;
+            if(size >= file.memEdges){            
+                sprintf(fileName,"%s/edges_tmp_%d",sub_dir.c_str(),tmpfile);
+                file.saveTmpEdges<EdgeSup>(edges,size,fileName,[](const EdgeSup & a, const EdgeSup & b) {
+                    return a.sup < b.sup;
+                    });
+                size = 0;
+                ++tmpfile;
+            }
+            //count range of edges' support
+            prefix[sup]++;
+            eid_eid tmp;
+            fOff.fseek(eid_uv*sizeof(eid_eid));
+            fOff.fread(&tmp,sizeof(eid_eid));
+
+            fseek(fSupp,tmp.first*sizeof(uint32_t),SEEK_SET);
+            fwrite(&sup,sizeof(uint32_t),1,fSupp);
+            fseek(fSupp,tmp.second*sizeof(uint32_t),SEEK_SET);
+            fwrite(&sup,sizeof(uint32_t),1,fSupp);
+            total_io += 2;
+            triangle_count += sup;
+        }
+    }
+    sprintf(fileName,"%s/edges_tmp_%d",sub_dir.c_str(),tmpfile);
+    file.saveTmpEdges<EdgeSup>(edges,size,fileName,[](const EdgeSup & a, const EdgeSup & b) {
+        return a.sup < b.sup;
+    });
+    
+    file.mergeBySup<EdgeSup>(tmpfile+1);
+    int current_pid = GetCurrentPid();
+    float memory_usage = GetMemoryUsage(current_pid);
+    memUsage = max(memory_usage,memUsage);
+
+    Triangles = triangle_count/3;
+    log_debug(graphClock_.Count("Original edges: %u, Now edges: %u, memUsage: %f",file.edgeNum,c,memUsage));
+    file.edgeNum = c;
+    total_io += file.write_io;
+
+    // print support of all edges
+    sortSupport(file);
+
+    total_io += fDat.get_total_io();
+    total_io += fEid.get_total_io();
+    total_io += fOff.get_total_io();
+
+    fDat.fclose();
+    fEid.fclose();
+    fOff.fclose();
+    fclose(fSupp); 
+    free(nbr_u);
+    free(nbr_v);
+    delete []edges;
+    log_debug(graphClock_.Count("Triangles: %d, MaxSupport: %u, MinSupport: %u",Triangles,maxSup,minSup));
+}
+
 
 void Graph::sortSupport(readFile &file){
     // calculate the prefix of edges' support
@@ -985,6 +1127,34 @@ uint32_t Graph::binary(readFile &file, uint32_t start, uint32_t end){
     return mid;
 }
 
+
+void Graph::binaryImproved(readFile &file, uint32_t start){
+    uint32_t left = start, right = maxSup, capacity = 0, mid = 0;
+    uint32_t TrussEdge = 0, last_mid = 0, Truss = 0;
+    while(left <= right){
+        mid = (left+right)/2;
+        last_mid = mid;
+        capacity = prefix[maxSup]-prefix[mid-1];
+
+        if(capacity < (mid+2)*(mid+1) / 2)
+        {
+            // log_info(graphClock_.Count("xxx mid: %u",mid));
+            right = mid-1;
+            continue;
+        }
+
+        /* ID of vertex is same as original graph */
+        if(!inducedGraphUnOrder(left,right,mid,file,TrussEdge,Truss,false))
+        {
+            right = mid-1;
+        }
+        else
+            left = mid+1;
+    }
+    total_io += file.write_io;
+    log_info(graphClock_.Count("Trussness: %d, Edge: %d, io: %lu\n", Truss+2, TrussEdge, total_io));
+}
+
 void Graph::binaryAndIncremental(readFile &file, uint32_t start){
     uint32_t left = start, right = maxSup;
     uint32_t capacity, mid;
@@ -1023,9 +1193,9 @@ void Graph::binaryAndIncremental(readFile &file, uint32_t start){
         MyReadFile fSup( file.m_suppSort );
         fSup.fopen( BUFFERED );
         // create director in order to fill new subgraph constituted by edges whose support greater than mid
-        string dir = "/home/jjq/research/ktruss/TrussProject/max_ktruss/graphInfoCopy";
+        string dir =  file.m_base + "graphInfoCopy/";
         file.createDir(dir);
-        string dir_name = "/home/jjq/research/ktruss/TrussProject/max_ktruss/graphInfoCopy/" + to_string(mid);
+        string dir_name = dir + to_string(mid);
         file.createDir(dir_name);
         dir_name += "/";
         readFile newFile(dir_name);
@@ -1068,15 +1238,15 @@ void Graph::binaryAndIncremental(readFile &file, uint32_t start){
         log_debug(graphClock_.Count("new subgraph vertex: %d, edge: %lu\n",newFile.verNum,newFile.edgeNum));
 
         Graph tmp_g(nodeNum,edgeNum);
-        // tmp_g.InitialUnOrder(newFile);
-        tmp_g.InitialUnOrderDegSort(newFile);
+        tmp_g.InitialUnOrder(newFile);
+        // tmp_g.InitialUnOrderDegSort(newFile);
 
 
         /* prune optimization -- kcore */
         if(!tmp_g.peelVertex(mid,newFile,false)) 
             printf("not exist\n");
         
-        tmp_g.CountTriangleSSDByDegOrder(newFile,true);
+        tmp_g.CountTriangleSSDPlus(newFile,true);
         
         log_debug(graphClock_.Count("mid: %d, num: %d",mid,tmp_g.prefix[tmp_g.maxSup]-tmp_g.prefix[mid-1]));
 
@@ -1127,12 +1297,12 @@ void Graph::constructBin(readFile &file){
     for(uint64_t i = 0; i < file.edgeNum; i++){
         fSup.fseek(i*sizeof(EdgeSup));
         fSup.fread(&tmp,sizeof(EdgeSup));
-        // printf("i: %u,u: %u,v: %u,sup: %u,eid: %lu\n",i,tmp.u,tmp.v,tmp.sup,tmp.eid);
+        
         e = {tmp.u,tmp.v,tmp.eid};
         uint32_t sup = tmp.sup;
 
         int pos = bin[sup];
-
+        // printf("i: %u,u: %u,v: %u,sup: %u,eid: %lu,pos: %u\n",i,tmp.u,tmp.v,tmp.sup,tmp.eid,pos);
         fseek(fBinEdge,pos*sizeof(TEdge),SEEK_SET);
         fwrite(&e,sizeof(TEdge),1,fBinEdge);
 
@@ -1473,7 +1643,7 @@ void Graph::CountTriangleSSDByDegOrder(readFile &file, bool saveSupEdge){
             if(saveSupEdge){
                 edges[size].u = u;
                 edges[size].v = v;
-                edges[size].sup = sup_uv; // 这里可以优化，减少写入?
+                edges[size].sup = sup_uv; 
                 edges[size].eid = eid_uv;
                 size++;                
                 if(size >= file.memEdges){            
@@ -1822,15 +1992,6 @@ bool Graph::inducedGraphUnOrder(uint32_t &left, uint32_t &right, uint32_t &mid, 
     char fileName[150];
     
     for(int i = prefix[mid-1] ; i < prefix[maxSup]; i++){
-        #ifdef semiBinary
-        uvSup tmp;
-        fSup.fseek(i*sizeof(uvSup));
-        fSup.fread(&tmp,sizeof(uvSup));
-        u = tmp.u;
-        v = tmp.v;
-        newFile.moduleInSaveEdgesUnOrder(u,v,num,edges,size,es,tmpFile,sub_dir);
-        es++;
-        #else
         EdgeSup tmp;
         fSup.fseek(i*sizeof(EdgeSup));
         fSup.fread(&tmp,sizeof(EdgeSup));
@@ -1838,7 +1999,6 @@ bool Graph::inducedGraphUnOrder(uint32_t &left, uint32_t &right, uint32_t &mid, 
         v = tmp.v;
         eid = tmp.eid;
         newFile.moduleInSaveEdgesUnOrder(u,v,num,edges,size,eid,tmpFile,sub_dir);
-        #endif
 
     }
     total_io += fSup.get_total_io();

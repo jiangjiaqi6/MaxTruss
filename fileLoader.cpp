@@ -353,9 +353,11 @@ struct comp{
 //merge data of sort_edge_tmp dir in degree increasing method 
 void readFile::mergeByDegSort(int size, uint32_t &vertexNum, uint32_t &maxDegree,
 string &name, bool flag, bool isBigG){
-    // if flag is true, graph vertex is reorder, otherwise, graph vertex is unorder
+    // if flag is true, graph vertex numbering starts from 0, otherwise, graph vertex is unorder
     // if isBigG is true, need not to write fEid and fOff datastructure
-
+    #ifdef semiBinary
+    isBigG = false;
+    #endif
 
     FILE** frl = new FILE*[size];
     TEdge* es = new TEdge[size];

@@ -22,7 +22,6 @@ int main(int argc, char **argv){
     Clock allClock("All");
     log_info(allClock.Start());
     string midResultBase = "/home/jjq/research/ktruss/midResult/"+str;
-    
     readFile file(midResultBase+"/");
     file.createDir(midResultBase);
     file.loadFile(filepath);
@@ -42,7 +41,8 @@ int main(int argc, char **argv){
         #endif
         log_info(allClock.Count("Triangle count done"));
 
-        g.binaryAndIncremental(file,1);
+        // g.binaryAndIncremental(file,1);
+        g.binaryImproved(file,1);
         log_info(allClock.Count("binaryAndIncremental done"));
         break;
     
@@ -50,7 +50,7 @@ int main(int argc, char **argv){
         g.CoreTrussDecomPlus(file);
         log_info(allClock.Count("CoreTrussDecomPlus done"));
         #ifdef Maintenance
-        g.dynamicMaxTrussMaintenance(file);  
+        // g.dynamicMaxTrussMaintenance(file);  
         // g.dynamicMaxTrussInsertion_YLJ(file);
         // g.dynamicMaxTrussDeletion_YLJ(file);
         // log_info(allClock.Count("dynamic MaxTruss done"));

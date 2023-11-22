@@ -240,8 +240,11 @@ public:
     void reconCoreGraph(uint32_t *coreNum, readFile &file, readFile &newFile);
 
     void filterGlobalIntoSub(bool *isInSubG, readFile &file, readFile &newFile, bool isDynamicload);
+    
 
     void binaryAndIncremental(readFile &file, uint32_t start);
+    void binaryImproved(readFile &file, uint32_t start);
+
     uint32_t binary(readFile &file, uint32_t start, uint32_t end);
     bool existTrussPlus(readFile &file, uint32_t &mid, uint32_t &TrussEdge, uint32_t &Truss);
     bool existTrussLazyUpdate(readFile &file, uint32_t &mid, uint32_t &TrussEdge, uint32_t &Truss, ListLinearHeapTruss *linear_heap, DynamicHeap &dheap);
@@ -260,6 +263,7 @@ public:
     int IntersectTriangleSSDByDegOrder(uint32_t u, uint32_t u_nbrNum,uint32_t *nbr_u, uint32_t v, uint32_t v_nbrNum, uint32_t *nbr_v, 
     MyReadFile &fDat, MyReadFile &fEid, std::vector<eid_eid> &common, std::unordered_map<uint64_t,uint32_t> &map_pos);
 
+    int IntersectTriangleSSDPlus(uint32_t u, uint32_t *nbr_u, uint32_t v, uint32_t *nbr_v);
 
     void IntersectTrussNew(uint32_t u, uint32_t *nbr_u, uint64_t *eid_u,  uint32_t *sup_u,
 uint32_t v, uint32_t *nbr_v, uint64_t *eid_v, uint32_t *sup_v, MyReadFile &fDat, MyReadFile &fEid, MyReadFile &fSup,

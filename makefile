@@ -4,8 +4,8 @@ INCL = -Iinclude
 CPP = g++
 
 
-# CFLAGS := -std=c++17 -Iinclude -w -g -mpopcnt -O3 -DDegSort  -DLazyUpdate 
-CFLAGS := -std=c++17 -Iinclude -w -g -mpopcnt -O3 -DDegSort  -DLazyUpdate -DMaintenance
+# CFLAGS := -std=c++17 -Iinclude -w -g -mpopcnt -O3 -DDegSort  -DLazyUpdate -DMaintenance
+CFLAGS := -std=c++17 -Iinclude -w -g -mpopcnt -O3 -DDegSort -DsemiBinary
 
 
 $(TARGET): $(OBJ)
