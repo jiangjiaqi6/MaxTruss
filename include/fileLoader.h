@@ -23,6 +23,8 @@
 #include <algorithm>
 #include <queue>
 
+//involving read and write operations on binary file
+
 class readFile{
 public:
     std::string m_idx;
@@ -121,6 +123,7 @@ public:
             munmap(addr, len);
         }
     }
+    //read vertex, maxdeg, edge information
     void initialGraphInfo(){
         MyReadFile fInfo( m_info );
 	    fInfo.fopen( BUFFERED );

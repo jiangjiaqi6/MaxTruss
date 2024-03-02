@@ -20,6 +20,8 @@ void Graph::loadInfo(T* nbr, uint32_t num, uint64_t pos, MyReadFile& fDat){
     fDat.fread(nbr,sizeof(T)*num);
 }
 
+
+//load O(n) array, such as, offset array and degree array
 void Graph::Initial(readFile &file){
     MyReadFile fIdx( file.m_idx );
 	fIdx.fopen( BUFFERED );

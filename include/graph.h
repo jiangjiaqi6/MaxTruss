@@ -19,6 +19,7 @@
 #include <unordered_set>
 
 
+
 class Graph
 {
 private:
@@ -62,6 +63,7 @@ private:
     // std::unordered_map<uint64_t,uint64_t> delTwoVerMapEid;
 
 public:
+// dynamic heap based on memory stores frequently accessed edges
     struct DynamicHeap{
         int size;
         int cap;

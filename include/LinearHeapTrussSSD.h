@@ -10,6 +10,9 @@ using uli = unsigned long long;
 
 #define pb push_back
 
+//linear heap based on the disk
+//double link efficiently access data on the disk
+
 class ListLinearHeapTruss {
 private:
 	ui64 n; // number edges
@@ -359,14 +362,6 @@ public:
 
 		return new_key;
 	}
-
-// 	void print(){
-// 		ui i;
-// 		for(i = 0; i <= key_cap; i++){
-// 			if(count[i])
-// 				tmpWrite << "key: " << i << ", count: " << count[i] << std::endl;
-// 		}
-// 	}
 
 private:
 	void tighten() {

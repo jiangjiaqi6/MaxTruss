@@ -344,8 +344,6 @@ void Graph::Initial(readFile &file){
 
 void Graph::InitialUnOrderDegSort(readFile &file){
     MyReadFile fIdx( file.m_idx );
-    // cout<<"InitialUnOrderDegSort:"<<file.m_idx<<endl;
-
 	fIdx.fopen( BUFFERED );
     uint64_t tmp = 0,tmpb;
     uint32_t degreeTmp = 0;
@@ -426,7 +424,7 @@ MyReadFile &fDat, MyReadFile &fEid, std::vector<eid_eid> &common, std::unordered
     return count;
 }
 
-
+//IO core decomposition
 void Graph::KCore(readFile &file, uint32_t *coreNum, bool isDynamicload){
     MyReadFile fDat( file.m_dat );
 	fDat.fopen( BUFFERED );
@@ -752,6 +750,7 @@ void Graph::CoreTrussDecomPlus(readFile &file){
     dir += "/";
     readFile newFile(dir);
 
+    //form cmax-core subgraph greedily
     reconCoreGraph(coreNum,file,newFile);
 
     Graph maxCoreG(newFile.verNum,newFile.edgeNum);
@@ -762,7 +761,7 @@ void Graph::CoreTrussDecomPlus(readFile &file){
 
     // secondCoreG.prepareStage(newFile);
     int lower_bound = maxCoreG.Triangles / (maxCoreG.edgeNum-maxCoreG.zero_edge);
-    last_sup = maxCoreG.binary(newFile,lower_bound,maxCore-1);
+    last_sup = maxCoreG.binary(newFile,lower_bound,maxCore-1);   //get local k'max from cmax-core
 
     total_io += maxCoreG.total_io;
 
@@ -792,6 +791,8 @@ void Graph::CoreTrussDecomPlus(readFile &file){
     file.createDir(dir);
     dir += "/";
     readFile subFile(dir);
+
+    //prune many useless nodes based on k'max
     filterGlobalIntoSub(isInSubG,file,subFile,false);  
 
     delete[] isInSubG;
@@ -857,7 +858,6 @@ void Graph::CoreTrussDecomPlus(readFile &file){
         newFile.edgeNum = num;
         delete[] edges;
 
-        // newFile.merge(tmpFile+1, node_num, max_degree, name, false);
         newFile.mergeByDegSort(tmpFile+1, node_num, max_degree, name, false,false);
 
         int current_pid = GetCurrentPid();
@@ -868,7 +868,6 @@ void Graph::CoreTrussDecomPlus(readFile &file){
         total_io += newFile.write_io;   
         
         Graph tmp_g(subG.nodeNum,subG.edgeNum);
-        // tmp_g.InitialUnOrder(newFile);
         tmp_g.InitialUnOrderDegSort(newFile);
 
 
@@ -1084,7 +1083,8 @@ void Graph::CountTriangleSSDPlus(readFile &file, bool isOrder){
     log_debug(graphClock_.Count("Triangles: %d, MaxSupport: %u, MinSupport: %u",Triangles,maxSup,minSup));
 }
 
-
+//to do: 
+//Compute the starting position of the edges saved on the disk
 void Graph::sortSupport(readFile &file){
     // calculate the prefix of edges' support
     // printf("sup 0 : %d\n",prefix[0]);
@@ -1137,8 +1137,7 @@ void Graph::binaryAndIncremental(readFile &file, uint32_t start){
         mid = (left+right)/2;
         last_mid = mid;
         capacity = prefix[maxSup]-prefix[mid-1];
-        printf("mid: %d, capacity: %d,prefix[maxSup]: %d\n", mid, capacity,prefix[maxSup]);
-        if(capacity < (mid+2)*(mid+1) / 2)
+        if(capacity < (mid+2)*(mid+1) / 2)  // a simple prunnig technique
         {
             right = mid-1;
             continue;
@@ -1247,6 +1246,7 @@ void Graph::binaryAndIncremental(readFile &file, uint32_t start){
 }
 
 
+//formulate bin info for the bin sort process
 void Graph::constructBin(readFile &file){
     int start = 0;
     int count=0,binsize;
@@ -1340,8 +1340,7 @@ bool Graph::bottomUpDecom(readFile &file, uint32_t &mid, uint32_t &TrussEdge, ui
         fSup.fseek(tmp.first*sizeof(uint32_t));
         fSup.fread(&sup,sizeof(uint32_t));
         
-        // fSup.fseek(eid_uv*sizeof(uint32_t));
-        // fSup.fread(&sup,sizeof(uint32_t));
+
 
         if(m-s < (mid+2)*(mid+1) / 2){
             mid = sup;
@@ -1434,12 +1433,15 @@ bool Graph::bottomUpDecom(readFile &file, uint32_t &mid, uint32_t &TrussEdge, ui
     return false;
 }
 
+//adopt traditional method wihout LHDH data structure to compute mid-truss
 bool Graph::existTrussPlus(readFile &file, uint32_t &mid, uint32_t &TrussEdge, uint32_t &Truss){
 
     constructBin(file);
     return bottomUpDecom(file,mid,TrussEdge,Truss);
 }
 
+
+//delete vertex which is unlikely to be part of mid-truss
 
 bool Graph::peelVertex(int mid, readFile &file, bool flag){
     log_debug(graphClock_.Count("enter peelVertex function, mid: %d",mid));
@@ -1521,6 +1523,10 @@ void Graph::prepareStage(readFile &file){
     fSuppSort.fclose();
 }
 
+
+//to do: 
+// compute the support of each edge, then stored edges on the disk in non-decreasing order of support
+//
 void Graph::CountTriangleSSDByDegOrder(readFile &file, bool saveSupEdge){
     int threshold;
     log_info(graphClock_.Count("CountTriangleSSDByDegOrder begin"));
@@ -1580,7 +1586,7 @@ void Graph::CountTriangleSSDByDegOrder(readFile &file, bool saveSupEdge){
             uint64_t offset = edgeListBegPtrPlus[i]*2+j*sizeof(uint64_t);
             map_pos[offset] += sup;
             
-            uint64_t eid_uv = 0; //?
+            uint64_t eid_uv = 0; 
             if(map_pos[offset] == 0){
                 zero_edge++;
                 map_pos.erase(offset);
@@ -1594,7 +1600,6 @@ void Graph::CountTriangleSSDByDegOrder(readFile &file, bool saveSupEdge){
             
             fEid.fseek(offset);
             fEid.fread(&eid_uv,sizeof(uint64_t));
-            // printf("u: %u, v: %u, sup: %u, offset: %lu, eid_uv: %lu\n",u,v,sup,offset,eid_uv);
 
             eid_eid tmp;
             fOff.fseek(eid_uv*sizeof(eid_eid));
@@ -1688,6 +1693,8 @@ void Graph::CountTriangleSSDByDegOrder(readFile &file, bool saveSupEdge){
     // log_debug(graphClock_.Count("Triangles: %u, MaxSupport: %u, MinSupport: %u, MapSize: %u",Triangles,maxSup,minSup,mapSize));
 }
 
+
+//adopt lazy update strategy to determine whether there is a mid-truss
 bool Graph::existTrussLazyUpdate(readFile &file, uint32_t &mid, uint32_t &TrussEdge, uint32_t &Truss, ListLinearHeapTruss *linear_heap, DynamicHeap &dheap){
     MyReadFile fSupSort( file.m_suppSort );
 	fSupSort.fopen( BUFFERED );
@@ -1760,7 +1767,7 @@ bool Graph::existTrussLazyUpdate(readFile &file, uint32_t &mid, uint32_t &TrussE
         linear_heap->pop_min(eid,sup,fPres,fNexts);
 
         if(linear_heap->exist_num+1 < (mid+2)*(mid+1) / 2){
-            mid = sup;
+            mid = sup;  //prune point 
             log_debug(graphClock_.Count("error last_sup: %d",sup));
             log_debug(graphClock_.Count("heap max size: %u, intersect_time: %lf, update_time: %lf",max_size,insetsect_interval,update_interval));
             total_io = total_io+fDat.get_total_io()+fEid.get_total_io()+fPres.get_total_io()+fNexts.get_total_io()+fEidToVer.get_total_io()+fSup.get_total_io()+fOff.get_total_io();
@@ -1833,13 +1840,15 @@ bool Graph::existTrussLazyUpdate(readFile &file, uint32_t &mid, uint32_t &TrussE
         gettimeofday(&end_time, NULL);
         insetsect_interval += (end_time.tv_sec - start_time.tv_sec) + (end_time.tv_usec - start_time.tv_usec)/1000000.0;
         gettimeofday(&start_time, NULL);
+
+        //update sup of the edges which stored in the dynamic heap or the linear heap
         for(int i = 0; i < comm.size(); i++){
             ui first_sup = sup_u[comm[i].first];
             ui second_sup = sup_v[comm[i].second];
             uint64_t eid_fir = eid_u[comm[i].first];
             uint64_t eid_sec = eid_v[comm[i].second];
 
-            if(dheap.find(eid_fir)){
+            if(dheap.find(eid_fir)){  //update sup of the edges which stored in the dynamic heap based in memory
                 if(dheap.getSup(eid_fir) == sup+1){
                     ui tmp = first_sup - (sup+1);
                     linear_heap->decrement(first_sup,eid_fir,fOff,fSup,fPres,fNexts,tmp+1);  
@@ -1857,7 +1866,7 @@ bool Graph::existTrussLazyUpdate(readFile &file, uint32_t &mid, uint32_t &TrussE
             else{
                 if(first_sup > sup){
                     if(first_sup > sup+1)
-                        dheap.push({eid_fir,first_sup - 1});
+                        dheap.push({eid_fir,first_sup - 1});   //put edge stored on the disk into dynamic heap
                     else
                         linear_heap->decrement(first_sup,eid_fir,fOff,fSup,fPres,fNexts);
                 } 
@@ -1941,6 +1950,7 @@ bool Graph::existTrussLazyUpdate(readFile &file, uint32_t &mid, uint32_t &TrussE
     return false;
 }
 
+//form subgraph based on original vertex and edge id in graph
 bool Graph::inducedGraphUnOrder(uint32_t &left, uint32_t &right, uint32_t &mid, readFile &file, uint32_t &TrussEdge, uint32_t &Truss, bool delOnSubg){
     uint64_t edge_num = 0;
 	uint32_t node_num = 0; 
@@ -1994,14 +2004,12 @@ bool Graph::inducedGraphUnOrder(uint32_t &left, uint32_t &right, uint32_t &mid, 
     memUsage = max(memory_usage,memUsage);
 	delete[] edges;
 
-	// newFile.merge(tmpFile+1, node_num, max_degree, name,false);
     newFile.mergeByDegSort(tmpFile+1, node_num, max_degree, name,false,false);
     log_debug(graphClock_.Count("new subgraph vertex: %d, edge: %lu\n",newFile.verNum,newFile.edgeNum));
 
     total_io += newFile.write_io;
     
     Graph tmp_g(nodeNum,edgeNum);
-    // tmp_g.InitialUnOrder(newFile);
     tmp_g.InitialUnOrderDegSort(newFile);
 
     /* prune optimization -- kcore */
@@ -2011,12 +2019,6 @@ bool Graph::inducedGraphUnOrder(uint32_t &left, uint32_t &right, uint32_t &mid, 
     tmp_g.CountTriangleSSDByDegOrder(newFile,true);
     log_debug(graphClock_.Count("mid: %d, num: %d",mid,tmp_g.prefix[tmp_g.maxSup]-tmp_g.prefix[mid-1]));
     
-    if(!delOnSubg){
-        bool flag_res = tmp_g.existTrussPlus(newFile,mid,TrussEdge,Truss);
-        total_io += tmp_g.total_io;
-        return flag_res;
-    }
-    else{
     
     /* prune optimization -- delete edges on original graph, so that avoid reconstructing subgraph */
     if(tmp_g.minSup >= mid)
@@ -2090,7 +2092,7 @@ bool Graph::inducedGraphUnOrder(uint32_t &left, uint32_t &right, uint32_t &mid, 
     #endif    
     total_io += tmp_g.total_io;
     return true;
-    }
+    
 }
 
 void Graph::updateNbrInExistTrussLazyUpdate(uint32_t u, uint32_t *nbr_u, uint64_t *eid_u,  uint32_t *sup_u,
@@ -2288,14 +2290,13 @@ bool Graph::deleteEdgeLazyUpdateTest(readFile &file, readFile &newFile,uint32_t 
         
 
     }
-    // log_info(graphClock_.Count("after deleting, exist edge: %lu",linear_heap->exist_num));
-    // log_info(graphClock_.Count("del_que size: %u",del_que.size()));
 
+
+    //put the edgs on the top of dynamic heap into linear heap
     linear_heap->empty();
     while(dheap.size > 0 && linear_heap->get_minkey() > dheap.arr[0].sup){
         es ret = dheap.pop();
         ui _sup = linear_heap->get_key(ret.eid,fSup,fOff);
-        // log_info(graphClock_.Count("dheap.arr[0].sup: %u, linear_heap sup: %u",dheap.arr[0].sup,_sup));
         ui tmp = _sup - ret.sup;
         if(tmp != 0)
             linear_heap->decrement(_sup,ret.eid,fOff,fSup,fPres,fNexts,tmp); 
@@ -3085,7 +3086,7 @@ void Graph::dynamicMaxTrussMaintenance(readFile &file){
 
     uint32_t *coreNum = new uint32_t[nodeNum]();   
     bool *isInSubG = new bool[nodeNum](); 
-    KCore(file,coreNum,false);  //here should be improved 
+    KCore(file,coreNum,false);
     
 
     string dir = file.m_base + "subGraphInfo/";
@@ -3182,7 +3183,7 @@ void Graph::dynamicMaxTrussMaintenance(readFile &file){
                 if(maxKtruss < last_sup)
                 {
                     bool isSame = true;
-                    KCore(file,coreNum,true);  //here should be improved 
+                    KCore(file,coreNum,true);  
                     bool *isInSubGCopy = new bool[nodeNum]();
                     int debug_c = 0;
                     for(int k = 0; k < nodeNum; k++)
@@ -3211,7 +3212,7 @@ void Graph::dynamicMaxTrussMaintenance(readFile &file){
                     dir = file.m_base + "subMainGraphInfo/";
                     file.createDir(dir);
                     readFile subFile(dir);
-                    filterGlobalIntoSub(isInSubG,file,subFile,true);   // there is bug, because the variable in subToGlobal will be changed   
+                    filterGlobalIntoSub(isInSubG,file,subFile,true);    
 
                     Graph subG(subFile.verNum,subFile.edgeNum);
                     subG_edgeNum = subFile.edgeNum, subG_nodeNum = subFile.verNum;
@@ -3572,15 +3573,6 @@ void Graph::delEdgeDynamic(Edge del_e, readFile &newFile, uint32_t maxK, uint64_
                 del_edge.push(tmp_es);
                 isInDelEdge.insert(eid_fir);
             }
-            // else if(first_sup > maxK){
-            //     fOff.fseek(eid_fir * sizeof(eid_eid));
-            //     fOff.fread(&tmp_,sizeof(eid_eid));
-            //     first_sup--;
-            //     fSup.fseek(tmp_.first*sizeof(uint32_t));
-            //     fSup.fwrite(&first_sup,sizeof(uint32_t));
-            //     fSup.fseek(tmp_.second*sizeof(uint32_t));
-            //     fSup.fwrite(&first_sup,sizeof(uint32_t));
-            // }
             
             if(second_sup == maxK && isInDelEdge.find(eid_sec) == isInDelEdge.end()){
                 // second_sup--;
@@ -3590,20 +3582,10 @@ void Graph::delEdgeDynamic(Edge del_e, readFile &newFile, uint32_t maxK, uint64_
                 del_edge.push(tmp_es);
                 isInDelEdge.insert(eid_sec);
             }
-            // else if(second_sup > maxK){
-            //     fOff.fseek(eid_sec * sizeof(eid_eid));
-            //     fOff.fread(&tmp_,sizeof(eid_eid));
-            //     second_sup--;
-            //     fSup.fseek(tmp_.first*sizeof(uint32_t));
-            //     fSup.fwrite(&second_sup,sizeof(uint32_t));
-            //     fSup.fseek(tmp_.second*sizeof(uint32_t));
-            //     fSup.fwrite(&second_sup,sizeof(uint32_t));
-            // }
+
         }
-        // fOff.fseek(eid_uv * sizeof(eid_eid));
-        // fOff.fread(&tmp_,sizeof(eid_eid));
+
         isInDelEdge.erase(eid_uv);
-        // sup_uv = DELETE(sup_uv);
         assert(degree_[u] > 0);
         assert(degree_[v] > 0);
         
@@ -3611,10 +3593,6 @@ void Graph::delEdgeDynamic(Edge del_e, readFile &newFile, uint32_t maxK, uint64_
             return;
         
         newFileEdge--;
-        // fSup.fseek(tmp_.first*sizeof(uint32_t));
-        // fSup.fwrite(&sup_uv,sizeof(uint32_t));
-        // fSup.fseek(tmp_.second*sizeof(uint32_t));
-        // fSup.fwrite(&sup_uv,sizeof(uint32_t));
     }
     total_io = total_io + fDat.get_total_io()+ fEid.get_total_io()+ fSup.get_total_io() + fSupSort.get_total_io() + fOff.get_total_io();
 

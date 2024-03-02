@@ -12,10 +12,9 @@ int main(int argc, char **argv){
         printf("Usage: -f [data_file_path] -m [method]  -d [dir]\n");
         exit(1);
     }
-    const char* filepath = argv[2];
+    const char* filepath = argv[2];  //original graph path
     uint32_t method = atoi(argv[4]);
-    // uint32_t persentate = atoi(argv[6]);
-    char* name = argv[6];
+    char* name = argv[6];  // folder for saving binary file of middle result
     string str = name;
 
 

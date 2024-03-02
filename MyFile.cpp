@@ -60,6 +60,7 @@ void MyReadFile::fclose() {
 		close( fin );
 		fin = -1;
 		buf_pos = -1;
+		total_io = 0;
 	}
 }
 

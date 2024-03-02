@@ -15,6 +15,10 @@ void readFile::createDir(string &sub_dir){
     }
 }
 
+
+//divide and conquer for sorting a extreme file
+//ordered internal information for subfile
+//merge many subfiles into an ordered extreme file 
 void readFile::moduleInSaveEdges(uint32_t &u,uint32_t &v,int &num,TEdge* edges,
         unsigned long  &size,unsigned long &es,int &tmpFile,string &sub_dir){
     u = getVertexID(u,num);
@@ -80,6 +84,8 @@ void readFile::moduleInSaveEdgesUnOrder(uint32_t &u,uint32_t &v,int &num,TEdge* 
 }
 
 
+
+//load graph data into binary file about graph
 
 void readFile::LoadGraph(){
     char *bptr = getAddr();
